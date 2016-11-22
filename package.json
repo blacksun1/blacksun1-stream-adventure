@@ -1,0 +1,14 @@
+{
+  "name": "blacksun1-stream-adventure",
+  "version": "0.0.1",
+  "description": "Implementation of https://www.npmjs.com/package/stream-adventure",
+  "main": "program.js",
+  "scripts": {
+    "test": "stream-adventure verify program.js"
+  },
+  "author": "Simon Bruce <simon@blacksun.cx>",
+  "license": "MIT",
+  "dependencies": {
+    "through2": "^2.0.1"
+  }
+}
