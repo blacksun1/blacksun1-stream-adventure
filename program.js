@@ -1,49 +1,100 @@
 "use strict";
 
 /*
-Concat
-======
+HTTP-Server
+===========
 
-You will be given text on process.stdin. Buffer the text and reverse it using
-the `concat-stream` module before writing it to stdout.
+In this challenge, write an http server that uses a through stream to write back
+the request stream as upper-cased response data for POST requests.
 
-`concat-stream` is a write stream that you can pass a callback to get the
-complete contents of a stream as a single buffer. Here's an example that uses
-concat to buffer POST content in order to JSON.parse() the submitted data:
+Streams aren't just for text files and stdin/stdout. Did you know that http
+request and response objects from node core's `http.createServer()` handler are
+also streams?
 
-    var concat = require('concat-stream');
+For example, we can stream a file to the response object:
+
     var http = require('http');
+    var fs = require('fs');
+    var server = http.createServer(function (req, res) {
+        fs.createReadStream('file.txt').pipe(res);
+    });
+    server.listen(process.argv[2]);
 
+This is great because our server can respond immediately without buffering
+everything in memory first.
+
+We can also stream a request to populate a file with data:
+
+    var http = require('http');
+    var fs = require('fs');
     var server = http.createServer(function (req, res) {
         if (req.method === 'POST') {
-            req.pipe(concat(function (body) {
-                var obj = JSON.parse(body);
-                res.end(Object.keys(obj).join('\n'));
-            }));
+            req.pipe(fs.createWriteStream('post.txt'));
         }
-        else res.end();
+        res.end('beep boop\n');
     });
-    server.listen(5000);
+    server.listen(process.argv[2]);
 
-In your adventure you'll only need to buffer input with `concat()` from
-process.stdin.
+You can test this post server with curl:
 
-Make sure to `npm install concat-stream` in the directory where your solution
-file is located.
+    $ node server.js 8000 &
+    $ echo hack the planet | curl -d@- http://localhost:8000
+    beep boop
+    $ cat post.txt
+    hack the planet
+
+Your http server should listen on the port given at process.argv[2] and convert
+the POST request written to it to upper-case using the same approach as the
+TRANSFORM example.
+
+As a refresher, here's an example with the default through2 callbacks explicitly
+defined:
+
+    var through = require('through2');
+    process.stdin.pipe(through(write, end)).pipe(process.stdout);
+
+    function write (buf, _, next) {
+      this.push(buf);
+      next();
+    }
+    function end (done) { done(); }
+
+Do that, but send upper-case data in your http server in response to POST data.
+
+Make sure to `npm install through2` in the directory where your solution file
+lives.
 
 */
 
-const Assert = require("assert");
+// const Assert = require("assert");
+const Boom = require("boom");
+// const Concat = require("concat-stream");
+// const Fs = require("fs");
+const Http = require("http");
+// const Reverse = require("reverse-string");
+// const Split = require("split");
 const Through = require("through2");
-const Split = require("split");
-const Concat = require("concat-stream");
-const Reverse = require("reverse-string");
 
 
-const upperCaseStream = Through();
+const server = Http.createServer(function (req, res) {
 
-process.stdin
-  .pipe(Concat(function(body) {
+  if (req.method === 'POST') {
+    req
+      .pipe(Through(function(buffer, encoding, next) {
+        this.push(buffer.toString().toUpperCase());
 
-    console.log(Reverse(body.toString()));
-  }));
+        return next();
+      }))
+      .pipe(res);
+
+    return;
+  }
+
+  const boom = Boom.methodNotAllowed("Expected a post");
+  res.writeHead(boom.output.statusCode, boom.output.payload.error, {
+    "Content-Type": "text/html"
+  });
+
+  return res.end(`<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error</h1>${boom.output.payload.message}</body>\n`);
+});
+server.listen(process.argv[2]);
