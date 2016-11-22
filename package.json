@@ -9,6 +9,8 @@
   "author": "Simon Bruce <simon@blacksun.cx>",
   "license": "MIT",
   "dependencies": {
+    "concat-stream": "^1.5.2",
+    "reverse-string": "0.0.6",
     "split": "^1.0.0",
     "through2": "^2.0.1"
   }
