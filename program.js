@@ -1,100 +1,46 @@
 "use strict";
 
 /*
-HTTP-Server
+HTTP Client
 ===========
 
-In this challenge, write an http server that uses a through stream to write back
-the request stream as upper-cased response data for POST requests.
+Send an HTTP POST request to http://localhost:8099 and pipe process.stdin into
+it. Pipe the response stream to process.stdout.
 
-Streams aren't just for text files and stdin/stdout. Did you know that http
-request and response objects from node core's `http.createServer()` handler are
-also streams?
+Here's an example of how to use the `request` module to send a GET request,
+piping the result to stdout:
 
-For example, we can stream a file to the response object:
+    var request = require('request');
+    request('http://beep.boop:80/').pipe(process.stdout);
 
-    var http = require('http');
-    var fs = require('fs');
-    var server = http.createServer(function (req, res) {
-        fs.createReadStream('file.txt').pipe(res);
-    });
-    server.listen(process.argv[2]);
+To make a POST request, just call `request.post()` instead of `request()`:
 
-This is great because our server can respond immediately without buffering
-everything in memory first.
+    var request = require('request');
+    var r = request.post('http://beep.boop:80/');
 
-We can also stream a request to populate a file with data:
+The `r` object that you get back from `request.post()` is a readable+writable
+stream so you can pipe a readable stream into it (`src.pipe(r)`) and you can
+pipe it to a writable stream (`r.pipe(dst)`).
 
-    var http = require('http');
-    var fs = require('fs');
-    var server = http.createServer(function (req, res) {
-        if (req.method === 'POST') {
-            req.pipe(fs.createWriteStream('post.txt'));
-        }
-        res.end('beep boop\n');
-    });
-    server.listen(process.argv[2]);
+You can even chain both steps together: src.pipe(r).pipe(dst);
 
-You can test this post server with curl:
+Hint: for your code, src will be process.stdin and dst will be process.stdout.
 
-    $ node server.js 8000 &
-    $ echo hack the planet | curl -d@- http://localhost:8000
-    beep boop
-    $ cat post.txt
-    hack the planet
-
-Your http server should listen on the port given at process.argv[2] and convert
-the POST request written to it to upper-case using the same approach as the
-TRANSFORM example.
-
-As a refresher, here's an example with the default through2 callbacks explicitly
-defined:
-
-    var through = require('through2');
-    process.stdin.pipe(through(write, end)).pipe(process.stdout);
-
-    function write (buf, _, next) {
-      this.push(buf);
-      next();
-    }
-    function end (done) { done(); }
-
-Do that, but send upper-case data in your http server in response to POST data.
-
-Make sure to `npm install through2` in the directory where your solution file
+Make sure to `npm install request` in the directory where your solution file
 lives.
 
 */
 
 // const Assert = require("assert");
-const Boom = require("boom");
+// const Boom = require("boom");
 // const Concat = require("concat-stream");
 // const Fs = require("fs");
-const Http = require("http");
+// const Http = require("http");
+const Request = require("request");
 // const Reverse = require("reverse-string");
 // const Split = require("split");
-const Through = require("through2");
+// const Through = require("through2");
 
 
-const server = Http.createServer(function (req, res) {
-
-  if (req.method === 'POST') {
-    req
-      .pipe(Through(function(buffer, encoding, next) {
-        this.push(buffer.toString().toUpperCase());
-
-        return next();
-      }))
-      .pipe(res);
-
-    return;
-  }
-
-  const boom = Boom.methodNotAllowed("Expected a post");
-  res.writeHead(boom.output.statusCode, boom.output.payload.error, {
-    "Content-Type": "text/html"
-  });
-
-  return res.end(`<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error</h1>${boom.output.payload.message}</body>\n`);
-});
-server.listen(process.argv[2]);
+const r = Request.post("http://localhost:8099");
+process.stdin.pipe(r).pipe(process.stdout);
