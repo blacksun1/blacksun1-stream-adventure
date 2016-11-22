@@ -1,11 +1,12 @@
 "use strict";
 
-const Assert = require("assert");
-const FS = require("fs");
+/*
+Take data from `process.stdin` and pipe it to `process.stdout`.
 
+With `.pipe()`. `process.stdin.pipe()` to be exact.
 
-const filename = process.argv[2]
-Assert(filename, "Expects a filename");
+Don't overthink this.
+*/
 
-FS.createReadStream(filename)
-  .pipe(process.stdout)
+process.stdin
+  .pipe(process.stdout);
