@@ -1,84 +1,80 @@
 "use strict";
 
 /*
-Convert data from `process.stdin` to upper-case data on `process.stdout`
-using the `through2` module.
+Instead of transforming every line as in the previous "TRANSFORM" example,
+for this challenge, convert even-numbered lines to upper-case and odd-numbered
+lines to lower-case. Consider the first line to be odd-numbered. For example
+given this input:
 
-To get the `through2` module you'll need to do:
+    One
+    Two
+    Three
+    Four
 
-    npm install through2
+Your program should output:
 
-A transform stream takes input data and applies an operation to the data to
-produce the output data.
+    one
+    TWO
+    three
+    FOUR
 
-Create a through stream with a `write` and `end` function:
+You can use the `split` module to split input by newlines. For example:
 
-    var through = require('through2');
-    var stream = through(write, end);
+    var split = require('split');
+    process.stdin
+        .pipe(split())
+        .pipe(through2(function (line, _, next) {
+            console.dir(line.toString());
+            next();
+        }))
+    ;
 
-The `write` function is called for every buffer of available input:
+`split` will buffer chunks on newlines before you get them. In the previous
+example, we will get separate events for each line even though all the data
+probably arrives on the same chunk:
 
-    function write (buffer, encoding, next) {
-        // ...
-    }
+    $ echo -e 'one\ntwo\nthree' | node split.js
+    'one'
+    'two'
+    'three'
 
-and the `end` function is called when there is no more data:
+Your own program should use `split` in this way, but you should transform the
+input and pipe the output through to `process.stdout`.
 
-    function end () {
-        // ...
-    }
-
-Inside the write function, call `this.push()` to produce output data and call
-`next()` when you're ready to receive the next chunk:
-
-    function write (buffer, encoding, next) {
-        this.push('I got some data: ' + buffer + '\n');
-        next();
-    }
-
-and call `done()` to finish the output:
-
-    function end (done) {
-        done();
-    }
-
-`write` and `end` are both optional.
-
-If `write` is not specified, the default implementation passes the input data to
-the output unmodified.
-
-If `end` is not specified, the default implementation calls `this.push(null)`
-to close the output side when the input side ends.
-
-Make sure to pipe `process.stdin` into your transform stream
-and pipe your transform stream into `process.stdout`, like this:
-
-    process.stdin.pipe(tr).pipe(process.stdout);
-
-To convert a buffer to a string, call `buffer.toString()`.
-
-
+Make sure to `npm install split through2` in the directory where your solution
+file lives.
 */
 
-const Through = require('through2');
+const Assert = require("assert");
+const Through = require("through2");
+const Split = require("split");
 
 
-function write(buffer, encoding, next) {
+function writeUpperCase(buffer, encoding, next) {
 
   this.push(buffer.toString().toUpperCase());
+}
+
+function writeLowerCase(buffer, encoding, next) {
+
+  this.push(buffer.toString().toLowerCase());
+}
+
+const funcs = [writeUpperCase, writeLowerCase];
+
+function toggleUpperAndLower(buffer, encoding, next) {
+
+  this.lineNumber = this.lineNumber || 0
+  const funcIndex = (this.lineNumber += 1) % 2;
+  funcs[funcIndex].apply(this, arguments);
+  this.push("\n");
 
   return next();
 }
-/*
- * end can be left as default
- */
-// function end(done) {
 
-//   return done();
-// }
-
-const upperCaseStream = Through(write);
+const upperCaseStream = Through(toggleUpperAndLower);
 
 process.stdin
+  .pipe(Split())
   .pipe(upperCaseStream)
   .pipe(process.stdout)
